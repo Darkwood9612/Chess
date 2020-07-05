@@ -2,6 +2,17 @@
 #include "SDL_image.h"
 #include <stdexcept>
 
+void TextureStorage::ImageLoad(char id, const std::string& path)
+{
+  storage[id] = LoadIMG_AndConvertToTexture(path);
+}
+
+GLuint TextureStorage::LookupTextureById(char id)
+{
+  auto it = storage.find(id);
+  return it == storage.end() ? -1 : it->second;
+}
+
 GLuint TextureStorage::LoadIMG_AndConvertToTexture(const std::string& name)
 {
   SDL_Surface* surface = IMG_Load(name.data());
@@ -57,23 +68,4 @@ GLuint TextureStorage::SurfaceToTexture(SDL_Surface* surface)
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
   return texture;
-}
-
-void TextureStorage::LoadPiecesImage(
-  const std::vector<std::pair<EPiece, std::string>>& piecesImagePath)
-{
-  for (auto& item : piecesImagePath) {
-    pieceStorage[item.first] = LoadIMG_AndConvertToTexture(item.second);
-  }
-}
-
-void TextureStorage::LoadFieldBackround(const std::string& path)
-{
-  fieldBackgroung = LoadIMG_AndConvertToTexture(path);
-}
-
-GLuint TextureStorage::GetPieceTextureId(Game::Piece piece)
-{
-  auto it = pieceStorage.find(piece.type);
-  return it == pieceStorage.end() ? -1 : it->second;
 }

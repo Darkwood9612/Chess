@@ -16,5 +16,11 @@ Window::Window(const char* title, uint32_t windowFlags,
                      SCREEN_WIDTH, SCREEN_HEIGHT, windowFlags);
   gl_context = SDL_GL_CreateContext(window);
   SDL_GL_MakeCurrent(window, gl_context);
-  SDL_GL_SetSwapInterval(1); // Enable vsync
+  SDL_GL_SetSwapInterval(1);
+}
+
+Window::~Window()
+{
+  SDL_DestroyWindow(window);
+  SDL_GL_DeleteContext(gl_context);
 }

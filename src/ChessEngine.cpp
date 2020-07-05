@@ -4,8 +4,10 @@
 
 void ChessEngine::SendCommand(const std::string& command)
 {
-  if (!ChessEngineIsWork())
-    return;
+
+  unsigned long exit = 0;
+  if (!IsWorked(exit))
+    throw std::runtime_error("ExitCodeProcess = " + std::to_string(exit));
 
   static const char endl = '\n';
 
@@ -13,53 +15,26 @@ void ChessEngine::SendCommand(const std::string& command)
   WriteFile(write_stdin, &endl, 1, &bread, NULL);
 }
 
-void ChessEngine::SetOption(const std::string& name, const std::string& value)
-{
-  std::string command = "setoption name " + name + " value " + value;
-  SendCommand(command);
-}
-
-void ChessEngine::Position(const std::string& fen)
-{
-  std::string command = "position fen " + fen;
-  SendCommand(command);
-}
-
-void ChessEngine::Position(const std::string& fen, const std::string& moves)
-{
-  std::string command = "position fen " + fen + " moves " + moves;
-  SendCommand(command);
-}
-
 bool ChessEngine::IsReady()
 {
   SendCommand("isready");
   Sleep(100);
-
-  if (!HasAnswer())
-    return false;
-
-  auto i = answers.size() - 1;
-  return answers[i].find("readyok") != std::string::npos;
+  GetAnswer();
+  return GetLastAnswer().find("readyok") != std::string::npos;
 }
 
-void ChessEngine::PositionStartPos(const std::string& moves)
+bool ChessEngine::GetAnswer()
 {
-  std::string command = "position startpos moves " + moves;
-  SendCommand(command);
-}
+  unsigned long exit = 0;
+  if (!IsWorked(exit))
+    throw std::runtime_error("ExitCodeProcess = " + std::to_string(exit));
 
-bool ChessEngine::HasAnswer()
-{
-  if (!ChessEngineIsWork())
-    return false;
-
-  PeekNamedPipe(read_stdout, buf, BUFF_SIZE - 1, &bread, &avail, NULL);
+  PeekNamedPipe(read_stdout, buf.data(), BUFF_SIZE - 1, &bread, &avail, NULL);
 
   if (bread == 0)
     return false;
 
-  bzero(buf);
+  buf.fill(0);
   std::stringstream ss;
 
   bool stdOutGeteerBuff = avail > BUFF_SIZE - 1;
@@ -67,34 +42,66 @@ bool ChessEngine::HasAnswer()
   if (stdOutGeteerBuff) {
 
     while (bread >= BUFF_SIZE - 1) {
-      ReadFile(read_stdout, buf, BUFF_SIZE - 1, &bread, NULL);
-      ss << buf;
-      bzero(buf);
+      ReadFile(read_stdout, buf.data(), BUFF_SIZE - 1, &bread, NULL);
+      ss << buf.data();
+      buf.fill(0);
     }
     answers.push_back(ss.str());
     return true;
   }
 
-  ReadFile(read_stdout, buf, BUFF_SIZE - 1, &bread, NULL);
-  ss << buf;
+  ReadFile(read_stdout, buf.data(), BUFF_SIZE - 1, &bread, NULL);
+  ss << buf.data();
   answers.push_back(ss.str());
   return true;
 }
 
 std::string ChessEngine::GetLastAnswer()
 {
+  if (answers.size() < 1)
+    return "answers empty";
+
   return answers[answers.size() - 1];
 }
 
-bool ChessEngine::ChessEngineIsWork()
+bool ChessEngine::IsWorked(unsigned long& exit)
 {
-  unsigned long exit = 0;
   GetExitCodeProcess(pi.hProcess, &exit);
   return exit == STILL_ACTIVE;
 }
 
+bool ChessEngine::NowWhiteMove()
+{
+  return this->Fen.find('w') != std::string::npos;
+}
+
+void ChessEngine::UpdateFen()
+{
+  GetAnswer();
+  SendCommand("d");
+  Sleep(100);
+  GetAnswer();
+
+  std::string answer = GetLastAnswer();
+
+  size_t fenBeginIndex = answer.find("Fen: ") + 5;
+  size_t fenSize = answer.find("\r\n", fenBeginIndex) - fenBeginIndex;
+
+  const char* fenPtr = answer.data() + fenBeginIndex;
+  char* resPrt = new char[fenSize];
+  strncpy(resPrt, fenPtr, fenSize);
+  std::string result = resPrt;
+
+  if (result.size() > fenSize)
+    result.erase(fenSize, result.size() - fenSize);
+
+  result += '\0';
+  this->Fen = result;
+}
+
 ChessEngine::~ChessEngine()
 {
+  SendCommand("quit");
   CloseHandle(pi.hThread);
   CloseHandle(pi.hProcess);
   CloseHandle(newstdin);
@@ -103,7 +110,18 @@ ChessEngine::~ChessEngine()
   CloseHandle(write_stdin);
 }
 
-void ChessEngine::Init(const std::string& enginePath)
+void ChessEngine::StartNewGame()
+{
+  answers.clear();
+  SendCommand("uci");
+  Sleep(100);
+  GetAnswer();
+  SendCommand("ucinewgame");
+  Sleep(100);
+  GetAnswer();
+}
+
+ChessEngine::ChessEngine(const std::string& enginePath)
 {
   sa.lpSecurityDescriptor = NULL;
   sa.nLength = sizeof(SECURITY_ATTRIBUTES);
@@ -135,6 +153,5 @@ void ChessEngine::Init(const std::string& enginePath)
     throw std::runtime_error("error CreateProcess");
   }
 
-  bzero(buf);
-  this->answers.reserve(1000);
+  buf.fill(0);
 }

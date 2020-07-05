@@ -35,10 +35,10 @@ target_link_libraries(test_task PRIVATE imgui::imgui)
 find_package(OpenGL REQUIRED)
 target_link_libraries(test_task PRIVATE OpenGL::GL)
 
-include_directories(test_task PUBLIC "C:/Users/Darkwood/AppData/Local/pmm/1.4.2/vcpkg-3d2a7ca33e9997051ea221c30ccd4835989879ad/installed/x64-windows/include/bindings")
+find_path(IMGUI_BINDINGS_INCLUDE_DIR NAMES imgui_impl_sdl.h PATH_SUFFIXES bindings)
+target_include_directories(test_task PUBLIC ${IMGUI_BINDINGS_INCLUDE_DIR})
 
 add_custom_target(copy_files ALL
   COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/image $<TARGET_FILE_DIR:test_task>/image
-  COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/font $<TARGET_FILE_DIR:test_task>/font
   COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/engine $<TARGET_FILE_DIR:test_task>/engine
 )

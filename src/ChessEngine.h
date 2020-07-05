@@ -1,45 +1,45 @@
 #pragma once
 #include <Windows.h>
+#include <array>
 #include <string>
 #include <vector>
-
-#define bzero(a) memset(a, 0, sizeof(a))
 
 class ChessEngine
 {
 public:
-  ChessEngine(const std::string& enginePath) { Init(enginePath); };
-
-  void SendCommand(const std::string& command);
-  void SetOption(const std::string& name, const std::string& value);
-  void PositionStartPos(const std::string& moves);
-  void Position(const std::string& fen);
-  void Position(const std::string& fen, const std::string& moves);
-
-  bool IsReady();
-
-  bool HasAnswer();
-
-  const std::vector<std::string>& GetAnswers() { return answers; };
-  std::string GetLastAnswer();
-  bool ChessEngineIsWork();
-
+  ChessEngine(const std::string& enginePath);
   ~ChessEngine();
 
-private:
-  void Init(const std::string& enginePath);
+  void StartNewGame();
 
+  void SendCommand(const std::string& command);
+  bool IsReady();
+  bool NowWhiteMove();
+
+  std::string GetFen() { return Fen; };
+  void UpdateFen();
+
+  const std::vector<std::string>& GetAnswers()
+  {
+    return answers;
+  }; /// TODO Delete
+
+private:
+  bool IsWorked(unsigned long& exit);
+  std::string GetLastAnswer();
+  bool GetAnswer();
   std::vector<std::string> answers;
 
-  static const uint32_t BUFF_SIZE = 1024;
-  char buf[BUFF_SIZE]; //буфер ввода/вывода
+  std::string Fen;
 
-  unsigned long bread; //кол-во прочитанных байт
-  unsigned long avail; //кол-во доступных байт
+  static const uint32_t BUFF_SIZE = 1024;
+  std::array<char, BUFF_SIZE> buf;
+
+  unsigned long bread = 0;
+  unsigned long avail = 0;
 
   STARTUPINFO si;
   SECURITY_ATTRIBUTES sa;
-  SECURITY_DESCRIPTOR sd;
   PROCESS_INFORMATION pi;
 
   HANDLE newstdin, newstdout, read_stdout, write_stdin;

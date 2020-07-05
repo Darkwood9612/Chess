@@ -1,19 +1,18 @@
 #include "util.h"
 
 namespace {
-void FillArrayEMPTY(std::array<Game::Piece, 64>& array, size_t startPos,
-               size_t numItems)
+void FillArrayEMPTY(std::array<char, 64>& array, size_t startPos,
+                    size_t numItems)
 {
   for (size_t i = startPos; i < startPos + numItems; ++i) {
-    array[i].type = EPiece::EMPTY;
-    array[i].isMovable = false;
+    array[i] = '\0';
   }
 };
 }
 
 namespace util {
 
-void split(std::string& s, std::vector<std::string>& fields,const char* sep)
+void split(std::string& s, std::vector<std::string>& fields, const char* sep)
 {
   fields.clear();
   size_t next = 0;
@@ -35,118 +34,35 @@ void split(std::string& s, std::vector<std::string>& fields,const char* sep)
       next = offset + 1;
   }
 }
-void FennToArray(const std::string& fen, std::array<Game::Piece, 64>& array,
-                 bool nowWhiteMove)
+std::array<char, 64> FennToArray(const std::string& fen)
 {
   size_t charIndex = 0;
+  std::array<char, 64> result;
 
-  for (size_t i = 0; i < array.size(); ++i) {
-    switch (fen.at(charIndex)) {
-      case 'p':
-        array[i].type = EPiece::B_PAWN;
-        array[i].isMovable = !nowWhiteMove;
-        ++charIndex;
-        break;
-      case 'r':
-        array[i].type = EPiece::B_ROOK;
-        array[i].isMovable = !nowWhiteMove;
-        ++charIndex;
-        break;
-      case 'n':
-        array[i].type = EPiece::B_KNIGHT;
-        array[i].isMovable = !nowWhiteMove;
-        ++charIndex;
-        break;
-      case 'b':
-        array[i].type = EPiece::B_BISHOP;
-        array[i].isMovable = !nowWhiteMove;
-        ++charIndex;
-        break;
-      case 'q':
-        array[i].type = EPiece::B_QUEEN;
-        array[i].isMovable = !nowWhiteMove;
-        ++charIndex;
-        break;
-      case 'k':
-        array[i].type = EPiece::B_KING;
-        array[i].isMovable = !nowWhiteMove;
-        ++charIndex;
-        break;
-      case 'P':
-        array[i].type = EPiece::W_PAWN;
-        array[i].isMovable = nowWhiteMove;
-        ++charIndex;
-        break;
-      case 'R':
-        array[i].type = EPiece::W_ROOK;
-        array[i].isMovable = nowWhiteMove;
-        ++charIndex;
-        break;
-      case 'N':
-        array[i].type = EPiece::W_KNIGHT;
-        array[i].isMovable = nowWhiteMove;
-        ++charIndex;
-        break;
-      case 'B':
-        array[i].type = EPiece::W_BISHOP;
-        array[i].isMovable = nowWhiteMove;
-        ++charIndex;
-        break;
-      case 'Q':
-        array[i].type = EPiece::W_QUEEN;
-        array[i].isMovable = nowWhiteMove;
-        ++charIndex;
-        break;
-      case 'K':
-        array[i].type = EPiece::W_KING;
-        array[i].isMovable = nowWhiteMove;
-        ++charIndex;
-        break;
-      case '1':
-        array[i].type = EPiece::EMPTY;
-        array[i].isMovable = false;
-        ++charIndex;
-        break;
-      case '2':
-        FillArrayEMPTY(array, i, 2);
-        i += 1;
-        ++charIndex;
-        break;
-      case '3':
-        FillArrayEMPTY(array, i, 3);
-        i += 2;
-        ++charIndex;
-        break;
-      case '4':
-        FillArrayEMPTY(array, i, 4);
-        i += 3;
-        ++charIndex;
-        break;
-      case '5':
-        FillArrayEMPTY(array, i, 5);
-        i += 4;
-        ++charIndex;
-        break;
-      case '6':
-        FillArrayEMPTY(array, i, 6);
-        i += 5;
-        ++charIndex;
-        break;
-      case '7':
-        FillArrayEMPTY(array, i, 7);
-        i += 6;
-        ++charIndex;
-        break;
-      case '8':
-        FillArrayEMPTY(array, i, 8);
-        i += 7;
-        ++charIndex;
-        break;
-      case '/':
-        --i;
-        ++charIndex;
-        break;
+  static const std::string pieces = "rnbqkpPRNBQK";
+  static const std::string numbers = "12345678";
+
+  for (size_t i = 0; i < result.size(); ++i) {
+
+    if (pieces.find(fen[charIndex]) != std::string::npos) {
+      result[i] = fen[charIndex];
+      ++charIndex;
+      continue;
+    }
+
+    if (numbers.find(fen[charIndex]) != std::string::npos) {
+      uint8_t number = atoi(&fen[charIndex]);
+      FillArrayEMPTY(result, i, number);
+      ++charIndex;
+      i += (number - 1);
+      continue;
+    }
+
+    if (fen[charIndex] == '/') {
+      --i;
+      ++charIndex;
     }
   }
+  return result;
 }
 }

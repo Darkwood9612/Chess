@@ -15,33 +15,29 @@
 #include <stdexcept>
 
 #include "ChessEngine.h"
-#include "GameModel.h"
+#include "DragDropManager.h"
 #include "TextureStorage.h"
 #include "Window.h"
+
+#include "util.h"
+#include "ChessDefines.h"
 
 #undef main
 
 namespace {
-
-constexpr char* FONT_PATH = "font\\fast99.ttf";
-constexpr int FONT_SIZE = 36;
-
 constexpr char* ENGINE_PATH = "engine\\stockfish_20011801_x64.exe";
 constexpr char* WINDOW_TITLE = "Chess";
+constexpr char g_BackgroundId = 'w';
 
 constexpr uint8_t NUMBER_OF_FIELD_COLUMNS = 8;
 constexpr uint8_t PIECE_IMAGE_SIZE = 90;
 
-int Quit(Window* window)
+int Quit()
 {
-
-  window ? SDL_DestroyWindow(window->window)
-         : throw std::runtime_error("window == nullptr");
   ImGui_ImplOpenGL2_Shutdown();
   ImGui_ImplSDL2_Shutdown();
   ImGui::DestroyContext();
 
-  SDL_GL_DeleteContext(window->gl_context);
   IMG_Quit();
   TTF_Quit();
   SDL_Quit();
@@ -84,6 +80,22 @@ int main(int argc, char** args)
     return tmp.c_str();
   };
 
+  std::vector<std::pair<EPiece, std::string>> piecesImage = {
+    { EPiece::W_PAWN, getAbsoluatePath("image\\white_pawn_large.png") },
+    { EPiece::W_ROOK, getAbsoluatePath("image\\white_rook_large.png") },
+    { EPiece::W_QUEEN, getAbsoluatePath("image\\white_queen_large.png") },
+    { EPiece::W_KNIGHT, getAbsoluatePath("image\\white_knight_large.png") },
+    { EPiece::W_KING, getAbsoluatePath("image\\white_king_large.png") },
+    { EPiece::W_BISHOP, getAbsoluatePath("image\\white_bishop_large.png") },
+
+    { EPiece::B_PAWN, getAbsoluatePath("image\\black_pawn_large.png") },
+    { EPiece::B_ROOK, getAbsoluatePath("image\\black_rook_large.png") },
+    { EPiece::B_QUEEN, getAbsoluatePath("image\\black_queen_large.png") },
+    { EPiece::B_KNIGHT, getAbsoluatePath("image\\black_knight_large.png") },
+    { EPiece::B_KING, getAbsoluatePath("image\\black_king_large.png") },
+    { EPiece::B_BISHOP, getAbsoluatePath("image\\black_bishop_large.png") }
+  };
+
   try {
     Init();
 
@@ -102,40 +114,19 @@ int main(int argc, char** args)
 
     TextureStorage textureStorage;
 
-    textureStorage.LoadFieldBackround(
-      getAbsoluatePath("image\\green_board_large.png"));
-
-    textureStorage.LoadPiecesImage({
-      { EPiece::W_PAWN, getAbsoluatePath("image\\white_pawn_large.png") },
-      { EPiece::W_ROOK, getAbsoluatePath("image\\white_rook_large.png") },
-      { EPiece::W_QUEEN, getAbsoluatePath("image\\white_queen_large.png") },
-      { EPiece::W_KNIGHT, getAbsoluatePath("image\\white_knight_large.png") },
-      { EPiece::W_KING, getAbsoluatePath("image\\white_king_large.png") },
-      { EPiece::W_BISHOP, getAbsoluatePath("image\\white_bishop_large.png") },
-
-      { EPiece::B_PAWN, getAbsoluatePath("image\\black_pawn_large.png") },
-      { EPiece::B_ROOK, getAbsoluatePath("image\\black_rook_large.png") },
-      { EPiece::B_QUEEN, getAbsoluatePath("image\\black_queen_large.png") },
-      { EPiece::B_KNIGHT, getAbsoluatePath("image\\black_knight_large.png") },
-      { EPiece::B_KING, getAbsoluatePath("image\\black_king_large.png") },
-      { EPiece::B_BISHOP, getAbsoluatePath("image\\black_bishop_large.png") },
-    });
+    for (auto& item : piecesImage) {
+      textureStorage.ImageLoad((char)item.first, item.second);
+    }
+    textureStorage.ImageLoad(g_BackgroundId,
+                             getAbsoluatePath("image\\green_board_large.png"));
 
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
     bool done = false;
 
     ChessEngine engine(getAbsoluatePath(ENGINE_PATH));
-    Game game(&engine);
-
-    game.StartNewGame();
-    game.UpdateField();
-
-    engine.PositionStartPos("a2a4");
-    game.UpdateField();
-
-    engine.Position(game.GetFEN(), "a7a5");
-    game.UpdateField();
+    engine.StartNewGame();
+    engine.UpdateFen();
 
     while (!done) {
 
@@ -165,15 +156,15 @@ int main(int argc, char** args)
                      ImGuiWindowFlags_NoScrollWithMouse);
 
       ImGui::GetBackgroundDrawList()->AddImage(
-        (void*)textureStorage.GetFieldBackroundTextureId(), ImVec2(0, 0),
+        (void*)textureStorage.LookupTextureById(g_BackgroundId), ImVec2(0, 0),
         ImVec2(DISPLAY_SIZE_Y, DISPLAY_SIZE_Y));
 
-      auto field = game.GetFieldData();
+      auto field = util::FennToArray(engine.GetFen());
 
       for (size_t x = 0; x < NUMBER_OF_FIELD_COLUMNS; ++x) {
         for (size_t y = 0; y < NUMBER_OF_FIELD_COLUMNS; ++y) {
-
-          auto pice = field[(x + y * NUMBER_OF_FIELD_COLUMNS)];
+          auto cellNumber = x + y * NUMBER_OF_FIELD_COLUMNS;
+          auto piece = field[cellNumber];
 
           ImGui::SetNextWindowSize(ImVec2(PIECE_IMAGE_SIZE, PIECE_IMAGE_SIZE),
                                    ImGuiCond_Once);
@@ -184,33 +175,35 @@ int main(int argc, char** args)
           ImGuiWindowFlags pieceFlags = ImGuiWindowFlags_NoDecoration |
             ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollWithMouse;
 
-          if (!pice.isMovable)
+          if (IsEmpty(piece) || (engine.NowWhiteMove() && IsBlack(piece)) ||
+              (!engine.NowWhiteMove() && IsWhite(piece)))
             pieceFlags |= ImGuiWindowFlags_NoMove;
 
-          ImGui::Begin(std::to_string(x + y * NUMBER_OF_FIELD_COLUMNS).c_str(),
-                       NULL, pieceFlags);
+          ImGui::Begin(std::to_string(cellNumber).c_str(), NULL, pieceFlags);
 
           auto piecePos = ImGui::GetWindowPos();
           ImGui::GetStyle().WindowBorderSize = 0.f;
 
           if (ImGui::BeginDragDropSource()) {
 
-              auto t = CUBE_FACE_SIZE / 2;
-            std::string res = std::to_string(int((piecePos.x + t) / CUBE_FACE_SIZE) +
-                                             int((piecePos.y+t) / CUBE_FACE_SIZE) *
-                                               NUMBER_OF_FIELD_COLUMNS);
+            auto t = CUBE_FACE_SIZE / 2;
+            std::string res =
+              std::to_string(int((piecePos.x + t) / CUBE_FACE_SIZE) +
+                             int((piecePos.y + t) / CUBE_FACE_SIZE) *
+                               NUMBER_OF_FIELD_COLUMNS);
 
-            ImGui::Text("Cell number \"%s\"", res.data());
+            ImGui::Text("Cell number %s", res.data());
 
             ImGui::EndDragDropSource();
           }
 
-          auto g = ImGui::IsMouseDragging();
+          auto g = ImGui::IsMouseDragging(0);
+          ImGui::Text("Drag = %d", g);
 
-          if (pice.type != EPiece::EMPTY) {
+          if (!IsEmpty(piece)) {
 
             ImGui::GetBackgroundDrawList()->AddImage(
-              (void*)textureStorage.GetPieceTextureId(pice),
+              (void*)textureStorage.LookupTextureById(piece),
               ImVec2(piecePos.x, piecePos.y),
               ImVec2(PIECE_IMAGE_SIZE + piecePos.x,
                      PIECE_IMAGE_SIZE + piecePos.y));
@@ -246,7 +239,7 @@ int main(int argc, char** args)
       SDL_GL_SwapWindow(window.window);
     }
 
-    return Quit(&window);
+    return Quit();
 
   } catch (const std::exception& e) {
     MessageBox(NULL, e.what(), NULL, MB_OK);
