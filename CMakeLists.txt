@@ -5,11 +5,11 @@ project(testTask CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-set(VCPKG_REVISION f29a191d0afccc3ed6f481283d6d15e0186096ae)
+set(VCPKG_REVISION 3d2a7ca33e9997051ea221c30ccd4835989879ad)
 
 # Download vcpkg dependencies
 include(cmake/pmm.cmake)
-set(ports sdl2:x64-windows sdl2-ttf:x64-windows sdl2-image:x64-windows imgui:x64-windows)
+set(ports sdl2:x64-windows sdl2-ttf:x64-windows sdl2-image:x64-windows imgui[bindings]:x64-windows opengl:x64-windows)
 
 pmm(VCPKG
   REVISION ${VCPKG_REVISION}
@@ -32,8 +32,13 @@ target_link_libraries(test_task PRIVATE SDL2::SDL2_image)
 find_package(imgui REQUIRED)
 target_link_libraries(test_task PRIVATE imgui::imgui)
 
+find_package(OpenGL REQUIRED)
+target_link_libraries(test_task PRIVATE OpenGL::GL)
+
+include_directories(test_task PUBLIC "C:/Users/Darkwood/AppData/Local/pmm/1.4.2/vcpkg-3d2a7ca33e9997051ea221c30ccd4835989879ad/installed/x64-windows/include/bindings")
 
 add_custom_target(copy_files ALL
   COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/image $<TARGET_FILE_DIR:test_task>/image
   COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/font $<TARGET_FILE_DIR:test_task>/font
+  COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/engine $<TARGET_FILE_DIR:test_task>/engine
 )

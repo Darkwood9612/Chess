@@ -25,21 +25,39 @@ void ChessEngine::Position(const std::string& fen)
   SendCommand(command);
 }
 
-void ChessEngine::Position(const std::string& begin, const std::string& end)
+void ChessEngine::Position(const std::string& fen, const std::string& moves)
 {
-  std::string command = "position startpos moves " + begin + " " + end;
+  std::string command = "position fen " + fen + " moves " + moves;
   SendCommand(command);
 }
 
-std::string ChessEngine::GetAnswer()
+bool ChessEngine::IsReady()
+{
+  SendCommand("isready");
+  Sleep(100);
+
+  if (!HasAnswer())
+    return false;
+
+  auto i = answers.size() - 1;
+  return answers[i].find("readyok") != std::string::npos;
+}
+
+void ChessEngine::PositionStartPos(const std::string& moves)
+{
+  std::string command = "position startpos moves " + moves;
+  SendCommand(command);
+}
+
+bool ChessEngine::HasAnswer()
 {
   if (!ChessEngineIsWork())
-    return "ChessEngine process is closed";
+    return false;
 
   PeekNamedPipe(read_stdout, buf, BUFF_SIZE - 1, &bread, &avail, NULL);
 
   if (bread == 0)
-    return "stdout empty";
+    return false;
 
   bzero(buf);
   std::stringstream ss;
@@ -53,12 +71,19 @@ std::string ChessEngine::GetAnswer()
       ss << buf;
       bzero(buf);
     }
-    return ss.str();
+    answers.push_back(ss.str());
+    return true;
   }
 
   ReadFile(read_stdout, buf, BUFF_SIZE - 1, &bread, NULL);
   ss << buf;
-  return ss.str();
+  answers.push_back(ss.str());
+  return true;
+}
+
+std::string ChessEngine::GetLastAnswer()
+{
+  return answers[answers.size() - 1];
 }
 
 bool ChessEngine::ChessEngineIsWork()
@@ -111,6 +136,5 @@ void ChessEngine::Init(const std::string& enginePath)
   }
 
   bzero(buf);
-
-  SendCommand("uci");
+  this->answers.reserve(1000);
 }

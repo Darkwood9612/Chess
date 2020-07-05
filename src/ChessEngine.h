@@ -1,6 +1,7 @@
 #pragma once
 #include <Windows.h>
 #include <string>
+#include <vector>
 
 #define bzero(a) memset(a, 0, sizeof(a))
 
@@ -11,16 +12,24 @@ public:
 
   void SendCommand(const std::string& command);
   void SetOption(const std::string& name, const std::string& value);
-  void Position(const std::string& begin, const std::string& end);
+  void PositionStartPos(const std::string& moves);
   void Position(const std::string& fen);
+  void Position(const std::string& fen, const std::string& moves);
 
-  std::string GetAnswer();
+  bool IsReady();
+
+  bool HasAnswer();
+
+  const std::vector<std::string>& GetAnswers() { return answers; };
+  std::string GetLastAnswer();
   bool ChessEngineIsWork();
 
   ~ChessEngine();
 
 private:
   void Init(const std::string& enginePath);
+
+  std::vector<std::string> answers;
 
   static const uint32_t BUFF_SIZE = 1024;
   char buf[BUFF_SIZE]; //буфер ввода/вывода
