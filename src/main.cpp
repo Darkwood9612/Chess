@@ -19,8 +19,8 @@
 #include "TextureStorage.h"
 #include "Window.h"
 
-#include "util.h"
 #include "ChessDefines.h"
+#include "util.h"
 
 #undef main
 
@@ -113,6 +113,17 @@ int main(int argc, char** args)
     ImGui_ImplOpenGL2_Init();
 
     TextureStorage textureStorage;
+    DragDropManager dragDropManager;
+
+    dragDropManager.SetDragCallback([](int8_t x, int8_t y) {
+      std::cout << "Drag: x = " << std::to_string(x)
+                << " y = " << std::to_string(y) << std::endl;
+    });
+
+    dragDropManager.SetDropCallback([](int8_t x, int8_t y) {
+      std::cout << "Drop: x = " << std::to_string(x)
+                << " y = " << std::to_string(y) << std::endl;
+    });
 
     for (auto& item : piecesImage) {
       textureStorage.ImageLoad((char)item.first, item.second);
@@ -166,6 +177,16 @@ int main(int argc, char** args)
           auto cellNumber = x + y * NUMBER_OF_FIELD_COLUMNS;
           auto piece = field[cellNumber];
 
+          if (!ImGui::IsMouseDragging(0) && !dragDropManager.IsEmpty()) {
+            dragDropManager.DropItem();
+          }
+
+          if (dragDropManager.GetDragItemName() ==
+                std::to_string(cellNumber) &&
+              !IsEmpty(piece)) {
+            continue;
+          }
+
           ImGui::SetNextWindowSize(ImVec2(PIECE_IMAGE_SIZE, PIECE_IMAGE_SIZE),
                                    ImGuiCond_Once);
           ImGui::SetNextWindowBgAlpha(0.0f);
@@ -175,8 +196,11 @@ int main(int argc, char** args)
           ImGuiWindowFlags pieceFlags = ImGuiWindowFlags_NoDecoration |
             ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollWithMouse;
 
-          if (IsEmpty(piece) || (engine.NowWhiteMove() && IsBlack(piece)) ||
-              (!engine.NowWhiteMove() && IsWhite(piece)))
+          bool pieceIsNotMoveble = IsEmpty(piece) ||
+            (engine.NowWhiteMove() && IsBlack(piece)) ||
+            (!engine.NowWhiteMove() && IsWhite(piece));
+
+          if (pieceIsNotMoveble)
             pieceFlags |= ImGuiWindowFlags_NoMove;
 
           ImGui::Begin(std::to_string(cellNumber).c_str(), NULL, pieceFlags);
@@ -186,6 +210,9 @@ int main(int argc, char** args)
 
           if (ImGui::BeginDragDropSource()) {
 
+            if (!pieceIsNotMoveble)
+              dragDropManager.SetDragItem(std::to_string(cellNumber), x, y,
+                                          piece);
             auto t = CUBE_FACE_SIZE / 2;
             std::string res =
               std::to_string(int((piecePos.x + t) / CUBE_FACE_SIZE) +
@@ -196,9 +223,6 @@ int main(int argc, char** args)
 
             ImGui::EndDragDropSource();
           }
-
-          auto g = ImGui::IsMouseDragging(0);
-          ImGui::Text("Drag = %d", g);
 
           if (!IsEmpty(piece)) {
 
@@ -211,6 +235,47 @@ int main(int argc, char** args)
 
           ImGui::End();
         }
+      }
+
+      if (!dragDropManager.IsEmpty()) {
+        ImGui::SetNextWindowSize(ImVec2(PIECE_IMAGE_SIZE, PIECE_IMAGE_SIZE),
+                                 ImGuiCond_Once);
+        ImGui::SetNextWindowBgAlpha(0.0f);
+        ImGui::SetNextWindowPos(
+          ImVec2(dragDropManager.GetDragItemStartPosX() * CUBE_FACE_SIZE,
+                 dragDropManager.GetDragItemStartPosY() * CUBE_FACE_SIZE),
+          ImGuiCond_Once);
+
+        auto cellNumber = dragDropManager.GetDragItemStartPosX() +
+          dragDropManager.GetDragItemStartPosY() * NUMBER_OF_FIELD_COLUMNS;
+
+        ImGuiWindowFlags pieceFlags = ImGuiWindowFlags_NoDecoration |
+          ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollWithMouse;
+
+        auto piece = dragDropManager.GetDragPiece();
+
+        ImGui::Begin(std::to_string(cellNumber).c_str(), NULL, pieceFlags);
+
+        auto piecePos = ImGui::GetWindowPos();
+        ImGui::GetStyle().WindowBorderSize = 0.f;
+
+        dragDropManager.SetDragItemCurrPosX(piecePos.x);
+        dragDropManager.SetDragItemCurrPosY(piecePos.y);
+
+        auto t = CUBE_FACE_SIZE / 2;
+        std::string res = std::to_string(
+          int((piecePos.x + t) / CUBE_FACE_SIZE) +
+          int((piecePos.y + t) / CUBE_FACE_SIZE) * NUMBER_OF_FIELD_COLUMNS);
+
+        ImGui::Text("Drag %s", res.data());
+
+        ImGui::GetBackgroundDrawList()->AddImage(
+          (void*)textureStorage.LookupTextureById(piece),
+          ImVec2(piecePos.x, piecePos.y),
+          ImVec2(PIECE_IMAGE_SIZE + piecePos.x,
+                 PIECE_IMAGE_SIZE + piecePos.y));
+
+        ImGui::End();
       }
 
       ImGui::End();
