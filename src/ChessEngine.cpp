@@ -102,6 +102,7 @@ void ChessEngine::UpdateFen()
 ChessEngine::~ChessEngine()
 {
   SendCommand("quit");
+  Sleep(1000);
   CloseHandle(pi.hThread);
   CloseHandle(pi.hProcess);
   CloseHandle(newstdin);

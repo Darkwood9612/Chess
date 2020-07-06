@@ -1,37 +1,38 @@
 #pragma once
-#include <string>
 #include <cstdint>
 #include <functional>
+#include <string>
 
 class DragDropManager
 {
 public:
-  void SetDragItem(std::string name, int8_t x, int8_t y, char piece);
+  void SetDragItem(std::string name, int8_t x, int8_t y, uint8_t numColumns,
+                   char piece);
   void DropItem();
 
   std::string GetDragItemName() { return dragItemName; };
-  int8_t GetDragItemStartPosX() { return dragItemStartPosX; };
-  int8_t GetDragItemStartPosY() { return dragItemStartPosY; };
-  int8_t GetDragItemCurrPosX() { return dragItemCurrPosX; };
-  int8_t GetDragItemCurrPosY() { return dragItemCurrPosY; };
   char GetDragPiece() { return piece; };
 
-  void SetDragItemCurrPosX(int8_t x) { dragItemCurrPosX = x; };
-  void SetDragItemCurrPosY(int8_t y) { dragItemCurrPosY = y; };
+  int8_t GetDragItemCurrCellId() { return dragItemCurrCellId; };
+  void SetDragItemCurrCellId(int8_t id) { dragItemCurrCellId = id; };
 
-  void SetDragCallback(std::function<void(int8_t, int8_t)> fn);
-  void SetDropCallback(std::function<void(int8_t, int8_t)> fn);
+  int8_t GetDragItemStartPosX() { return dragItemStartPosX; };
+  int8_t GetDragItemStartPosY() { return dragItemStartPosY; };
 
-  bool IsEmpty() { return dragItemName == " "; };
+  void SetDragCallback(std::function<void(std::string, int8_t)> fn);
+  void SetDropCallback(std::function<void(std::string, int8_t)> fn);
+
+  bool IsEmpty() { return dragItemName == "null"; };
 
 private:
-  std::function<void(int8_t, int8_t)> StartDragCallback;
-  std::function<void(int8_t, int8_t)> StartDropCallback;
+  std::function<void(std::string, int8_t)> StartDragCallback;
+  std::function<void(std::string, int8_t)> StartDropCallback;
 
-  std::string dragItemName = " ";
-  int8_t dragItemStartPosY = -1;
+  std::string dragItemName = "null";
+  int8_t dragItemCurrCellId = -1;
+
   int8_t dragItemStartPosX = -1;
-  int8_t dragItemCurrPosY = -1;
-  int8_t dragItemCurrPosX = -1;
+  int8_t dragItemStartPosY = -1;
+
   char piece = '\0';
 };
