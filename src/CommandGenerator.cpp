@@ -1,9 +1,16 @@
 #include "CommandGenerator.h"
 
-CommandGenerator::CommandGenerator()
+std::string CommandGenerator::NewGame()
 {
+  return "ucinewgame";
 }
 
-CommandGenerator::~CommandGenerator()
+std::string CommandGenerator::Position(std::string fen)
 {
+  return "position fen " + fen;
+}
+
+std::string CommandGenerator::Position(std::string fen, std::string moves)
+{
+  return "position fen " + fen + " moves " + moves;
 }

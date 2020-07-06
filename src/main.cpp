@@ -15,11 +15,13 @@
 #include <stdexcept>
 
 #include "ChessEngine.h"
+#include "CommandGenerator.h"
 #include "DragDropManager.h"
 #include "TextureStorage.h"
 #include "Window.h"
 
 #include "ChessDefines.h"
+#include "Move.h"
 #include "util.h"
 
 #undef main
@@ -118,16 +120,29 @@ int main(int argc, char** args)
     engine.UpdateFen();
 
     DragDropManager dragDropManager;
+    Move move;
+    bool newError = false;
+    dragDropManager.SetDragCallback(
+      [&engine, &move](std::string cellId, int8_t dragCellId) {
+        // std::cout << "Cell number: " << cellId << " taken from "
+        //       << std::to_string(dragCellId) << std::endl;
+        move.SetFrom(dragCellId, NUMBER_OF_FIELD_COLUMNS);
+      });
 
-    dragDropManager.SetDragCallback([](std::string cellId, int8_t dragCellId) {
-      std::cout << "Cell number: " << cellId << " taken from "
-                << std::to_string(dragCellId) << std::endl;
-    });
+    dragDropManager.SetDropCallback(
+      [&engine, &move, &newError](std::string cellId, int8_t dropCellId) {
+        // std::cout << "Cell number: " << cellId << " set to "
+        //       << std::to_string(dropCellId) << std::endl;
 
-    dragDropManager.SetDropCallback([](std::string cellId, int8_t dropCellId) {
-      std::cout << "Cell number: " << cellId << " set to "
-                << std::to_string(dropCellId) << std::endl;
-    });
+        move.SetTo(dropCellId, NUMBER_OF_FIELD_COLUMNS);
+
+        auto fen = engine.GetFen();
+        engine.SendCommand(CommandGenerator::Position(fen, move.GetMove()));
+        engine.UpdateFen();
+
+        if (engine.GetFen() == fen)
+          newError = true;
+      });
 
     TextureStorage textureStorage;
 
@@ -196,9 +211,8 @@ int main(int argc, char** args)
               ImVec2(PIECE_IMAGE_SIZE, PIECE_IMAGE_SIZE), ImGuiCond_Once);
             ImGui::SetNextWindowBgAlpha(0.0f);
             ImGui::SetNextWindowPos(
-              ImVec2(x * CUBE_FACE_SIZE + 5,
-                     y * CUBE_FACE_SIZE + 5), /// TODO: Fix Offset
-              ImGuiCond_Once);
+              ImVec2(x * CUBE_FACE_SIZE + 3,
+                     y * CUBE_FACE_SIZE)); /// TODO: Fix Offset
 
             ImGuiWindowFlags pieceFlags = ImGuiWindowFlags_NoDecoration |
               ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollWithMouse;
@@ -289,12 +303,32 @@ int main(int argc, char** args)
           ImGuiCond_Once);
 
         ImGui::Begin("Options", NULL,
-                     ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+                     ImGuiWindowFlags_NoDecoration |
+                       ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
 
         ImGui::Text("ms/frame (%.1f FPS)", io.Framerate);
 
         for (auto& str : engine.GetAnswers())
           ImGui::Text("%s", str.data());
+
+        ImGui::End();
+      }
+
+      /// Draw wrong move errors
+      if (newError) {
+        ImGui::SetNextWindowPos(
+          ImVec2(io.DisplaySize.x / 4, io.DisplaySize.y / 2), ImGuiCond_Once);
+        ImGui::SetNextWindowSize(ImVec2(300, 75), ImGuiCond_Once);
+
+        ImGui::Begin("Error", NULL,
+                     ImGuiWindowFlags_NoDecoration |
+                       ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+        std::string err = "e2e5";
+        ImGui::NewLine();
+        ImGui::Text("       Error: wrong move = %s", err.data());
+        ImGui::SameLine();
+        if (ImGui::Button("Ok", ImVec2(25, 20)))
+          newError = false;
 
         ImGui::End();
       }

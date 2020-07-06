@@ -1,10 +1,11 @@
 #pragma once
+#include <string>
 
 class CommandGenerator
 {
 public:
-  CommandGenerator();
-  ~CommandGenerator();
+  static std::string NewGame();
 
-private:
+  static std::string Position(std::string fen);
+  static std::string Position(std::string fen, std::string moves);
 };
