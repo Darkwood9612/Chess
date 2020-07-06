@@ -66,6 +66,17 @@ void Init()
     throw std::runtime_error("Fatal initialization IMG error: " + err);
   }
 }
+void AddImageToPieceBackgroundDrawList(char piece, ImVec2 piecePos,
+                                       TextureStorage& textureStorage)
+{
+  if (IsEmpty(piece))
+    return;
+
+  ImGui::GetBackgroundDrawList()->AddImage(
+    (void*)textureStorage.LookupTextureById(piece),
+    ImVec2(piecePos.x, piecePos.y),
+    ImVec2(PIECE_IMAGE_SIZE + piecePos.x, PIECE_IMAGE_SIZE + piecePos.y));
+}
 }
 
 int main(int argc, char** args)
@@ -108,7 +119,7 @@ int main(int argc, char** args)
     ImGuiIO& io = ImGui::GetIO();
 
     Window window = Window(
-      WINDOW_TITLE, SDL_WINDOW_OPENGL | SDL_WINDOW_ALLOW_HIGHDPI, 1235, 742);
+      WINDOW_TITLE, SDL_WINDOW_OPENGL | SDL_WINDOW_ALLOW_HIGHDPI, 742, 742);
     if (!window.window)
       throw std::runtime_error("window == nullptr");
 
@@ -127,16 +138,11 @@ int main(int argc, char** args)
 
     dragDropManager.SetDragCallback(
       [&move](std::string cellId, int8_t dragCellId) {
-        // std::cout << "Cell number: " << cellId << " taken from "
-        //       << std::to_string(dragCellId) << std::endl;
         move.SetFrom(dragCellId, NUMBER_OF_FIELD_COLUMNS);
       });
 
     dragDropManager.SetDropCallback(
       [&engine, &move, &messages](std::string cellId, int8_t dropCellId) {
-        // std::cout << "Cell number: " << cellId << " set to "
-        //       << std::to_string(dropCellId) << std::endl;
-
         move.SetTo(dropCellId, NUMBER_OF_FIELD_COLUMNS);
 
         auto fen = engine.GetFen();
@@ -147,6 +153,17 @@ int main(int argc, char** args)
           std::string info =
             "\tError: move " + move.GetMove() + " is considered unacceptable!";
           messages.push(info);
+        }
+
+        switch (engine.IsSomebodyWon()) {
+          case ChessEngine::WinningSide::Black:
+            messages.push("\tBlack Player Win. GameOver!");
+            break;
+          case ChessEngine::WinningSide::White:
+            messages.push("\tWhite Player Win. GameOver!");
+            break;
+          case ChessEngine::WinningSide::NoOne:
+            return;
         }
       });
 
@@ -182,7 +199,7 @@ int main(int argc, char** args)
       /// Draw Board
       {
         ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Once);
-        ImGui::SetNextWindowSize(ImVec2(io.DisplaySize.y, io.DisplaySize.y),
+        ImGui::SetNextWindowSize(ImVec2(io.DisplaySize.x, io.DisplaySize.y),
                                  ImGuiCond_Once);
         ImGui::SetNextWindowBgAlpha(0.0f);
 
@@ -192,7 +209,7 @@ int main(int argc, char** args)
 
         ImGui::GetBackgroundDrawList()->AddImage(
           (void*)textureStorage.LookupTextureById(g_BackgroundId),
-          ImVec2(0, 0), ImVec2(io.DisplaySize.y, io.DisplaySize.y));
+          ImVec2(0, 0), ImVec2(io.DisplaySize.x, io.DisplaySize.y));
 
         auto field = util::FennToArray(engine.GetFen());
 
@@ -248,14 +265,7 @@ int main(int argc, char** args)
               ImGui::EndDragDropSource();
             }
 
-            if (!IsEmpty(piece)) {
-
-              ImGui::GetBackgroundDrawList()->AddImage(
-                (void*)textureStorage.LookupTextureById(piece),
-                ImVec2(piecePos.x, piecePos.y),
-                ImVec2(PIECE_IMAGE_SIZE + piecePos.x,
-                       PIECE_IMAGE_SIZE + piecePos.y));
-            }
+            AddImageToPieceBackgroundDrawList(piece, piecePos, textureStorage);
 
             ImGui::End();
           }
@@ -289,11 +299,7 @@ int main(int argc, char** args)
             int((piecePos.x + t) / CUBE_FACE_SIZE) +
             int((piecePos.y + t) / CUBE_FACE_SIZE) * NUMBER_OF_FIELD_COLUMNS);
 
-          ImGui::GetBackgroundDrawList()->AddImage(
-            (void*)textureStorage.LookupTextureById(piece),
-            ImVec2(piecePos.x, piecePos.y),
-            ImVec2(PIECE_IMAGE_SIZE + piecePos.x,
-                   PIECE_IMAGE_SIZE + piecePos.y));
+          AddImageToPieceBackgroundDrawList(piece, piecePos, textureStorage);
 
           ImGui::End();
         }
@@ -301,36 +307,17 @@ int main(int argc, char** args)
 
       ImGui::End();
 
-      /// Draw Console output
-      {
-        ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.y, 0), ImGuiCond_Once);
-        ImGui::SetNextWindowSize(
-          ImVec2(io.DisplaySize.x - io.DisplaySize.y, io.DisplaySize.y),
-          ImGuiCond_Once);
-
-        ImGui::Begin("Options", NULL,
-                     ImGuiWindowFlags_NoDecoration |
-                       ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
-
-        ImGui::Text("ms/frame (%.1f FPS)", io.Framerate);
-
-        for (auto& str : engine.GetAnswers())
-          ImGui::Text("%s", str.data());
-
-        ImGui::End();
-      }
-
       /// Draw wrong move errors
       if (!messages.empty()) {
-        
+
         ImGui::SetNextWindowSize(ImVec2(375, 100), ImGuiCond_Once);
 
         ImGui::Begin("Error", NULL,
                      ImGuiWindowFlags_NoDecoration |
                        ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
-        
+
         ImGui::SetWindowPos(
-          ImVec2(io.DisplaySize.y / 4,
+          ImVec2(io.DisplaySize.x / 4,
                  io.DisplaySize.y / 2 - ImGui::GetWindowHeight()),
           ImGuiCond_Once);
 
@@ -339,7 +326,7 @@ int main(int argc, char** args)
         ImGui::NewLine();
         ImGui::Text(messages.front().data());
         ImGui::NewLine();
-        ImGui::Indent(ImGui::GetWindowWidth() / 2 - buttonOkSize.x); 
+        ImGui::Indent(ImGui::GetWindowWidth() / 2 - buttonOkSize.x);
 
         if (ImGui::Button("ok", buttonOkSize))
           messages.pop();

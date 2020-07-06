@@ -1,37 +1,40 @@
 #pragma once
 #include <Windows.h>
 #include <array>
+#include <stack>
 #include <string>
-#include <vector>
 
 class ChessEngine
 {
 public:
+  enum class WinningSide
+  {
+    NoOne = 1,
+    White,
+    Black
+  };
+
   ChessEngine(const std::string& enginePath);
   ~ChessEngine();
 
   void StartNewGame();
-
   void SendCommand(const std::string& command);
+
   bool IsReady();
   bool NowWhiteMove();
-
-  std::string GetFen() { return Fen; };
   void UpdateFen();
 
-  const std::vector<std::string>& GetAnswers()
-  {
-    return answers;
-  }; /// TODO Delete
+  WinningSide IsSomebodyWon();
+  std::string GetFen() { return Fen; };
 
 private:
-  bool IsWorked(unsigned long& exit);
+  bool IsWorked();
+
   std::string GetLastAnswer();
   bool GetAnswer();
-  std::vector<std::string> answers;
 
   std::string Fen;
-
+  std::stack<std::string> answers;
   static const uint32_t BUFF_SIZE = 1024;
   std::array<char, BUFF_SIZE> buf;
 
