@@ -23,6 +23,7 @@
 #include "ChessDefines.h"
 #include "Move.h"
 #include "util.h"
+#include <queue>
 
 #undef main
 
@@ -121,16 +122,18 @@ int main(int argc, char** args)
 
     DragDropManager dragDropManager;
     Move move;
-    bool newError = false;
+
+    std::queue<std::string> messages;
+
     dragDropManager.SetDragCallback(
-      [&engine, &move](std::string cellId, int8_t dragCellId) {
+      [&move](std::string cellId, int8_t dragCellId) {
         // std::cout << "Cell number: " << cellId << " taken from "
         //       << std::to_string(dragCellId) << std::endl;
         move.SetFrom(dragCellId, NUMBER_OF_FIELD_COLUMNS);
       });
 
     dragDropManager.SetDropCallback(
-      [&engine, &move, &newError](std::string cellId, int8_t dropCellId) {
+      [&engine, &move, &messages](std::string cellId, int8_t dropCellId) {
         // std::cout << "Cell number: " << cellId << " set to "
         //       << std::to_string(dropCellId) << std::endl;
 
@@ -140,8 +143,11 @@ int main(int argc, char** args)
         engine.SendCommand(CommandGenerator::Position(fen, move.GetMove()));
         engine.UpdateFen();
 
-        if (engine.GetFen() == fen)
-          newError = true;
+        if (engine.GetFen() == fen) {
+          std::string info =
+            "\tError: move " + move.GetMove() + " is considered unacceptable!";
+          messages.push(info);
+        }
       });
 
     TextureStorage textureStorage;
@@ -315,20 +321,28 @@ int main(int argc, char** args)
       }
 
       /// Draw wrong move errors
-      if (newError) {
-        ImGui::SetNextWindowPos(
-          ImVec2(io.DisplaySize.x / 4, io.DisplaySize.y / 2), ImGuiCond_Once);
-        ImGui::SetNextWindowSize(ImVec2(300, 75), ImGuiCond_Once);
+      if (!messages.empty()) {
+        
+        ImGui::SetNextWindowSize(ImVec2(375, 100), ImGuiCond_Once);
 
         ImGui::Begin("Error", NULL,
                      ImGuiWindowFlags_NoDecoration |
                        ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
-        std::string err = "e2e5";
+        
+        ImGui::SetWindowPos(
+          ImVec2(io.DisplaySize.y / 4,
+                 io.DisplaySize.y / 2 - ImGui::GetWindowHeight()),
+          ImGuiCond_Once);
+
+        static ImVec2 buttonOkSize(30, 20);
+
         ImGui::NewLine();
-        ImGui::Text("       Error: wrong move = %s", err.data());
-        ImGui::SameLine();
-        if (ImGui::Button("Ok", ImVec2(25, 20)))
-          newError = false;
+        ImGui::Text(messages.front().data());
+        ImGui::NewLine();
+        ImGui::Indent(ImGui::GetWindowWidth() / 2 - buttonOkSize.x); 
+
+        if (ImGui::Button("ok", buttonOkSize))
+          messages.pop();
 
         ImGui::End();
       }
@@ -345,6 +359,6 @@ int main(int argc, char** args)
     return Quit();
 
   } catch (const std::exception& e) {
-    MessageBox(NULL, e.what(), NULL, MB_OK);
+    MessageBox(NULL, e.what(), NULL, MB_OK | MB_ICONERROR);
   }
 };
