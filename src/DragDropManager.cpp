@@ -9,14 +9,14 @@ void DragDropManager::SetDragItem(std::string name, int8_t x, int8_t y,
   piece = _piece;
 
   if (dragItemName != name)
-    StartDragCallback(name, dragItemCurrCellId);
+    StartDragCallback(dragItemCurrCellId);
 
   dragItemName = name;
 }
 
 void DragDropManager::DropItem()
 {
-  StartDropCallback(dragItemName, dragItemCurrCellId);
+  StartDropCallback(false, dragItemCurrCellId);
   dragItemName = "null";
   dragItemStartPosY = -1;
   dragItemStartPosX = -1;
@@ -24,14 +24,18 @@ void DragDropManager::DropItem()
   piece = '\0';
 }
 
+void DragDropManager::DropItemAI()
+{
+  StartDropCallback(true, dragItemCurrCellId);
+}
+
 void DragDropManager::SetDragCallback(
-  std::function<void(std::string, int8_t)> fn)
+  std::function<void(int8_t)> fn)
 {
   StartDragCallback = fn;
 }
 
-void DragDropManager::SetDropCallback(
-  std::function<void(std::string, int8_t)> fn)
+void DragDropManager::SetDropCallback(std::function<void(bool, int8_t)> fn)
 {
   StartDropCallback = fn;
 }

@@ -2,7 +2,7 @@
 
 std::string CommandGenerator::NewGame()
 {
-  return "ucinewgame";
+  return "position startpos";
 }
 
 std::string CommandGenerator::Position(std::string fen)
@@ -13,4 +13,14 @@ std::string CommandGenerator::Position(std::string fen)
 std::string CommandGenerator::Position(std::string fen, std::string moves)
 {
   return "position fen " + fen + " moves " + moves;
+}
+
+std::string CommandGenerator::GoSearchInfinite()
+{
+  return "go infinite";
+}
+
+std::string CommandGenerator::Stop()
+{
+  return "stop";
 }

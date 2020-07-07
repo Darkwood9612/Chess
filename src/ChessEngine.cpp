@@ -7,6 +7,9 @@ void ChessEngine::SendCommand(const std::string& command)
   if (!IsWorked())
     throw std::runtime_error("Engine Process not run");
 
+  if (command.empty())
+    return;
+
   static const char endl = '\n';
 
   WriteFile(write_stdin, command.data(), command.size(), &bread, NULL);
@@ -117,28 +120,13 @@ ChessEngine::~ChessEngine()
 {
   SendCommand("quit");
   Sleep(500);
+  TerminateProcess(pi.hProcess, 0);
   CloseHandle(pi.hThread);
   CloseHandle(pi.hProcess);
   CloseHandle(newstdin);
   CloseHandle(newstdout);
   CloseHandle(read_stdout);
   CloseHandle(write_stdin);
-
-  if (IsWorked())
-    TerminateProcess(pi.hProcess, 0);
-}
-
-void ChessEngine::StartNewGame()
-{
-  while (!answers.empty())
-    answers.pop();
-
-  SendCommand("uci");
-  Sleep(100);
-  GetAnswer();
-  SendCommand("ucinewgame");
-  Sleep(200);
-  GetAnswer();
 }
 
 ChessEngine::ChessEngine(const std::string& enginePath)

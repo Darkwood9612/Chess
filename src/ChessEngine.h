@@ -17,7 +17,6 @@ public:
   ChessEngine(const std::string& enginePath);
   ~ChessEngine();
 
-  void StartNewGame();
   void SendCommand(const std::string& command);
 
   bool IsReady();
@@ -27,10 +26,10 @@ public:
   WinningSide IsSomebodyWon();
   std::string GetFen() { return Fen; };
 
+  std::string GetLastAnswer();
+
 private:
   bool IsWorked();
-
-  std::string GetLastAnswer();
   bool GetAnswer();
 
   std::string Fen;
