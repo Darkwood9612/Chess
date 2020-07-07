@@ -12,18 +12,17 @@
 
 #include <filesystem>
 #include <iostream>
+#include <queue>
 #include <stdexcept>
 
+#include "ChessDefines.h"
 #include "ChessEngine.h"
 #include "CommandGenerator.h"
 #include "DragDropManager.h"
+#include "Move.h"
 #include "TextureStorage.h"
 #include "Window.h"
-
-#include "ChessDefines.h"
-#include "Move.h"
 #include "util.h"
-#include <queue>
 
 #undef main
 
@@ -81,11 +80,6 @@ void AddImageToPieceBackgroundDrawList(char piece, ImVec2 piecePos,
 
 int main(int argc, char** args)
 {
-
-  // while (!IsDebuggerPresent()) {
-  //    Sleep(1);
-  //}
-
   setlocale(0, "");
 
   std::string tmpPath;
@@ -127,72 +121,6 @@ int main(int argc, char** args)
     ImGui_ImplSDL2_InitForOpenGL(window.window, window.gl_context);
     ImGui_ImplOpenGL2_Init();
 
-    ChessEngine engine(getAbsoluatePath(ENGINE_PATH));
-    ChessEngine engineReval(getAbsoluatePath(ENGINE_PATH));
-
-    DragDropManager dragDropManager;
-    TurnControl turnControl;
-    Move move;
-
-    auto startGameAndChoseRival = [&engine, &engineReval,
-                                   &turnControl](bool playerWontPlayWithAI) {
-      engine.SendCommand(CommandGenerator::NewGame());
-      Sleep(500);
-      engine.UpdateFen();
-      engineReval.SendCommand(CommandGenerator::NewGame());
-      Sleep(500);
-      engineReval.UpdateFen();
-
-      turnControl.SetPlayerMadeChoice(playerWontPlayWithAI);
-    };
-
-    std::queue<std::string> messages;
-
-    dragDropManager.SetDragCallback([&move](int8_t dragCellId) {
-      move.SetFrom(dragCellId, NUMBER_OF_FIELD_COLUMNS);
-    });
-
-    dragDropManager.SetDropCallback([&engine, &engineReval, &turnControl,
-                                     &move,
-                                     &messages](bool isAI, int8_t dropCellId) {
-      if (!isAI)
-        move.SetTo(dropCellId, NUMBER_OF_FIELD_COLUMNS);
-
-      auto fen = engine.GetFen();
-      engine.SendCommand(CommandGenerator::Position(fen, move.GetMove()));
-      engine.UpdateFen();
-
-      bool isMoveWrong = engine.GetFen() == fen && !move.IsFromEqualTo();
-
-      if (isMoveWrong) {
-        std::string info =
-          "\tError: move " + move.GetMove() + " is considered unacceptable!";
-        messages.push(info);
-      }
-
-      switch (engine.IsSomebodyWon()) {
-        case ChessEngine::WinningSide::Black:
-          messages.push("\tBlack Player Win. GameOver!");
-          turnControl.StartNewGame();
-          return;
-        case ChessEngine::WinningSide::White:
-          messages.push("\tWhite Player Win. GameOver!");
-          turnControl.StartNewGame();
-          return;
-        case ChessEngine::WinningSide::NoOne:
-
-          if ((!isMoveWrong && !engine.NowWhiteMove()) ||
-              (engine.GetFen() == fen && !engine.NowWhiteMove())) {
-
-            engineReval.SendCommand(
-              CommandGenerator::Position(engine.GetFen()));
-
-            engineReval.SendCommand(CommandGenerator::GoSearchInfinite());
-            turnControl.SetStartThinkTime();
-          }
-      }
-    });
-
     TextureStorage textureStorage;
 
     for (auto& item : piecesImage) {
@@ -201,6 +129,72 @@ int main(int argc, char** args)
 
     textureStorage.ImageLoad(g_BackgroundId,
                              getAbsoluatePath("image\\green_board_large.png"));
+
+    ChessEngine engine(getAbsoluatePath(ENGINE_PATH));
+    ChessEngine engineReval(getAbsoluatePath(ENGINE_PATH));
+
+    DragDropManager dragDropManager;
+    TurnControl turnControl;
+    Move move;
+
+    std::queue<std::string> uiNotifications;
+
+    auto startGameAndChoseRival = [&engine, &engineReval,
+                                   &turnControl](bool playerWontPlayWithAI) {
+      engine.SendCommand(CommandGenerator::NewGame());
+      Sleep(300);
+      engine.UpdateFen();
+      engineReval.SendCommand(CommandGenerator::NewGame());
+      Sleep(300);
+      engineReval.UpdateFen();
+
+      turnControl.SetPlayerMadeChoice(playerWontPlayWithAI);
+    };
+
+    dragDropManager.SetDragCallback([&move](int8_t dragCellId) {
+      move.SetFrom(dragCellId, NUMBER_OF_FIELD_COLUMNS);
+    });
+
+    dragDropManager.SetDropCallback(
+      [&engine, &engineReval, &turnControl, &move,
+       &uiNotifications](bool isAI, int8_t dropCellId) {
+        if (!isAI)
+          move.SetTo(dropCellId, NUMBER_OF_FIELD_COLUMNS);
+
+        auto fen = engine.GetFen();
+        engine.SendCommand(CommandGenerator::Position(fen, move.GetMove()));
+        engine.UpdateFen();
+
+        bool isMoveWrong = engine.GetFen() == fen && !move.IsFromEqualTo();
+
+        if (isMoveWrong) {
+          std::string info =
+            "\tError: move " + move.GetMove() + " is considered unacceptable!";
+          uiNotifications.push(info);
+        }
+
+        switch (engine.IsSomebodyWon()) {
+          case ChessEngine::WinningSide::Black:
+            uiNotifications.push("\tBlack Player Win. GameOver!");
+            turnControl.StartNewGame();
+            return;
+          case ChessEngine::WinningSide::White:
+            uiNotifications.push("\tWhite Player Win. GameOver!");
+            turnControl.StartNewGame();
+            return;
+          case ChessEngine::WinningSide::NoOne:
+
+            if ((!isMoveWrong && !engine.NowWhiteMove()) ||
+                (engine.GetFen() == fen && !engine.NowWhiteMove())) {
+
+              engineReval.SendCommand(
+                CommandGenerator::Position(engine.GetFen()));
+
+              engineReval.SendCommand(CommandGenerator::GoSearchInfinite());
+              turnControl.SetStartThinkTime();
+            }
+        }
+      });
 
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
@@ -215,6 +209,7 @@ int main(int argc, char** args)
           needToGoOut = true;
       }
 
+      /// Say AI make a move if he thought enough
       if (turnControl.IsPlayerMadeChoice() &&
           turnControl.IsPlayerPlayWithAI() && !engine.NowWhiteMove() &&
           turnControl.IsEngineThoughtEnough()) {
@@ -279,19 +274,18 @@ int main(int argc, char** args)
               ImVec2(PIECE_IMAGE_SIZE, PIECE_IMAGE_SIZE), ImGuiCond_Once);
             ImGui::SetNextWindowBgAlpha(0.0f);
             ImGui::SetNextWindowPos(
-              ImVec2(x * CUBE_FACE_SIZE + 3,
-                     y * CUBE_FACE_SIZE)); /// TODO: Fix Offset
+              ImVec2(x * CUBE_FACE_SIZE + 3, y * CUBE_FACE_SIZE));
 
             ImGuiWindowFlags pieceFlags = ImGuiWindowFlags_NoDecoration |
               ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollWithMouse;
 
-            bool pieceIsNotMoveble = IsEmpty(piece) ||
+            bool pieceCannotBeMoved = IsEmpty(piece) ||
               (engine.NowWhiteMove() && IsBlack(piece)) ||
               (!engine.NowWhiteMove() && IsWhite(piece)) ||
               !turnControl.IsPlayerMadeChoice() ||
               (turnControl.IsPlayerPlayWithAI() && IsBlack(piece));
 
-            if (pieceIsNotMoveble)
+            if (pieceCannotBeMoved)
               pieceFlags |= ImGuiWindowFlags_NoMove;
 
             ImGui::Begin(std::to_string(cellNumber).c_str(), NULL, pieceFlags);
@@ -300,13 +294,13 @@ int main(int argc, char** args)
             ImGui::GetStyle().WindowBorderSize = 0.f;
 
             if (ImGui::BeginDragDropSource()) {
-              auto offsetToCentr = CUBE_FACE_SIZE / 2;
+              auto halfSquare = CUBE_FACE_SIZE / 2;
 
-              if (!pieceIsNotMoveble)
+              if (!pieceCannotBeMoved)
                 dragDropManager.SetDragItem(
                   std::to_string(cellNumber),
-                  (piecePos.x + offsetToCentr) / CUBE_FACE_SIZE,
-                  (piecePos.y + offsetToCentr) / CUBE_FACE_SIZE,
+                  (piecePos.x + halfSquare) / CUBE_FACE_SIZE,
+                  (piecePos.y + halfSquare) / CUBE_FACE_SIZE,
                   NUMBER_OF_FIELD_COLUMNS, piece);
 
               ImGui::EndDragDropSource();
@@ -354,10 +348,8 @@ int main(int argc, char** args)
         }
       }
 
-      ImGui::End();
-
       /// Draw wrong move errors
-      if (!messages.empty()) {
+      if (!uiNotifications.empty()) {
 
         ImGui::SetNextWindowSize(ImVec2(375, 100), ImGuiCond_Once);
 
@@ -373,12 +365,12 @@ int main(int argc, char** args)
         ImVec2 buttonOkSize(30, 20);
 
         ImGui::NewLine();
-        ImGui::Text(messages.front().data());
+        ImGui::Text(uiNotifications.front().data());
         ImGui::NewLine();
         ImGui::Indent(ImGui::GetWindowWidth() / 2 - buttonOkSize.x);
 
         if (ImGui::Button("ok", buttonOkSize))
-          messages.pop();
+          uiNotifications.pop();
 
         ImGui::End();
       }

@@ -1,7 +1,7 @@
 #pragma once
+#include <ctime>
 #include <optional>
 #include <string>
-#include <ctime>
 
 struct Move
 {

@@ -29,8 +29,7 @@ void DragDropManager::DropItemAI()
   StartDropCallback(true, dragItemCurrCellId);
 }
 
-void DragDropManager::SetDragCallback(
-  std::function<void(int8_t)> fn)
+void DragDropManager::SetDragCallback(std::function<void(int8_t)> fn)
 {
   StartDragCallback = fn;
 }

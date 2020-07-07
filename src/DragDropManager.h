@@ -21,7 +21,7 @@ public:
   int8_t GetDragItemStartPosY() { return dragItemStartPosY; };
 
   void SetDragCallback(std::function<void(int8_t)> fn);
-  void SetDropCallback(std::function<void(bool , int8_t)> fn);
+  void SetDropCallback(std::function<void(bool, int8_t)> fn);
 
   bool IsEmpty() { return dragItemName == "null"; };
 
