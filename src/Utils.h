@@ -2,12 +2,13 @@
 #include <array>
 #include <string>
 #include <vector>
+#include "ChessDefines.h"
 
-namespace util {
+namespace utils {
 
 void split(std::string& str, std::vector<std::string>& result,
            const char* sep);
 
-std::array<char, 64> FennToArray(const std::string& fen);
+std::array<Chess::EPiece, 64> FennToArray(const std::string& fen);
 
 }

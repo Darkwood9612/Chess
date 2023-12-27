@@ -1,48 +1,56 @@
 #pragma once
-#include <Windows.h>
+#include "ChessDefines.h"
+
 #include <array>
 #include <stack>
 #include <string>
+#include <Windows.h>
 
-class ChessEngine
+namespace Chess
 {
-public:
-  enum class WinningSide
-  {
-    NoOne = 1,
-    White,
-    Black
-  };
+	class ChessEngine final
+	{
+	public:
+		explicit ChessEngine(const std::string& enginePath);
+		~ChessEngine();
 
-  ChessEngine(const std::string& enginePath);
-  ~ChessEngine();
+		ChessEngine(const ChessEngine&) = delete;
+		ChessEngine& operator=(const ChessEngine&) = delete;
 
-  void SendCommand(const std::string& command);
+		ChessEngine(ChessEngine&&) = delete;
+		ChessEngine& operator=(ChessEngine&&) = delete;
 
-  bool IsReady();
-  bool NowWhiteMove();
-  void UpdateFen();
+	public:
+		void SendCommand(const std::string& command);
 
-  WinningSide IsSomebodyWon();
-  std::string GetFen() { return Fen; };
+		[[nodiscard]] bool IsReady();
+		[[nodiscard]] bool IsWhiteTurnToMove() const;
 
-  std::string GetLastAnswer();
+		void UpdateFen();
 
-private:
-  bool IsWorked();
-  bool GetAnswer();
+		[[nodiscard]] WinningSide IsSomebodyWon();
 
-  std::string Fen;
-  std::stack<std::string> answers;
-  static const uint32_t BUFF_SIZE = 1024;
-  std::array<char, BUFF_SIZE> buf;
+		[[nodiscard]] std::string GetFen() const;
 
-  unsigned long bread = 0;
-  unsigned long avail = 0;
+		[[nodiscard]] std::string GetLastAnswer() const;
 
-  STARTUPINFO si;
-  SECURITY_ATTRIBUTES sa;
-  PROCESS_INFORMATION pi;
+	private:
+		[[nodiscard]] bool IsWorked() const;
+		[[nodiscard]] bool GetAnswer();
 
-  HANDLE newstdin, newstdout, read_stdout, write_stdin;
-};
+		std::string _fen {};
+		std::stack<std::string> _answers {};
+
+		static constexpr inline uint32_t BUFF_SIZE = 1024;
+
+		std::array<char, BUFF_SIZE> _buffer {};
+
+		unsigned long _numberOfBytesRead = 0;
+		unsigned long _totalBytesAvailable = 0;
+
+		STARTUPINFO _startupInfo;
+		SECURITY_ATTRIBUTES _securityAttributes;
+		PROCESS_INFORMATION _processInformation;
+		HANDLE _newStdIn, _newStdOut, _readStdOut, _writeStdIn;
+	};
+} // namespace Chess

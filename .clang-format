@@ -1,18 +1,88 @@
-BasedOnStyle: Mozilla
-AlignOperands: false
-AllowShortFunctionsOnASingleLine: InlineOnly
+---
+BasedOnStyle: WebKit
+AccessModifierOffset: '-4'
+AlignAfterOpenBracket: Align
+AlignConsecutiveAssignments: 'false'
+AlignConsecutiveDeclarations: 'false'
+AlignEscapedNewlines: Right
+AlignOperands: 'true'
+AlignTrailingComments: 'true'
+AllowAllArgumentsOnNextLine: 'false'
+AllowAllConstructorInitializersOnNextLine: 'false'
+AllowAllParametersOfDeclarationOnNextLine: 'false'
+AllowShortBlocksOnASingleLine: 'false'
+AllowShortCaseLabelsOnASingleLine: 'false'
+AllowShortFunctionsOnASingleLine: Empty
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLambdasOnASingleLine: Empty
+AllowShortLoopsOnASingleLine: 'false'
 AlwaysBreakAfterDefinitionReturnType: None
 AlwaysBreakAfterReturnType: None
-BinPackArguments: true
-BinPackParameters: true
-BraceWrapping:
-  AfterClass:      true
-  AfterEnum:       true
-  AfterFunction:   true
-  AfterStruct:     true
-  AfterUnion:      true
+AlwaysBreakBeforeMultilineStrings: 'false'
+AlwaysBreakTemplateDeclarations: 'Yes'
+BinPackArguments: 'true'
+BinPackParameters: 'true'
 BreakBeforeBraces: Custom
-ColumnLimit: 79
-IndentPPDirectives: AfterHash
-SortUsingDeclarations: false
-SpaceAfterTemplateKeyword: true
+BraceWrapping:
+  AfterCaseLabel: 'true'
+  AfterClass: 'true'
+  AfterControlStatement: 'false'
+  AfterEnum: 'true'
+  AfterFunction: 'true'
+  AfterNamespace: 'true'
+  AfterStruct: 'true'
+  AfterUnion: 'true'
+  AfterExternBlock: 'true'
+  BeforeCatch: 'true'
+  BeforeElse: 'true'
+  SplitEmptyFunction: 'false'
+  SplitEmptyRecord: 'false'
+  SplitEmptyNamespace: 'false'
+  IndentBraces: 'false'
+BreakBeforeBinaryOperators: NonAssignment
+BreakBeforeTernaryOperators: 'true'
+BreakConstructorInitializers: BeforeComma
+BreakStringLiterals: 'true'
+ColumnLimit: '160'
+CompactNamespaces: 'false'
+ConstructorInitializerAllOnOneLineOrOnePerLine: 'false'
+ConstructorInitializerIndentWidth: '4'
+ContinuationIndentWidth: '4'
+Cpp11BracedListStyle: 'false'
+DerivePointerAlignment: 'false'
+FixNamespaceComments: 'true'
+IncludeBlocks: Regroup
+IndentCaseLabels: 'true'
+IndentPPDirectives: BeforeHash
+IndentWidth: '4'
+IndentWrappedFunctionNames: 'true'
+KeepEmptyLinesAtTheStartOfBlocks: 'false'
+Language: Cpp
+MaxEmptyLinesToKeep: '1'
+NamespaceIndentation: All
+PointerAlignment: Left
+ReflowComments: 'true'
+SortIncludes: 'CaseInsensitive'
+SortUsingDeclarations: 'false'
+SpaceAfterCStyleCast: 'false'
+SpaceAfterLogicalNot: 'false'
+SpaceAfterTemplateKeyword: 'false'
+SpaceBeforeAssignmentOperators: 'true'
+SpaceBeforeCpp11BracedList: 'true'
+SpaceBeforeCtorInitializerColon: 'true'
+SpaceBeforeInheritanceColon: 'true'
+SpaceBeforeParens: ControlStatements
+SpaceBeforeRangeBasedForLoopColon: 'true'
+SpaceInEmptyParentheses: 'false'
+SpacesBeforeTrailingComments: '1'
+SpacesInAngles: 'false'
+SpacesInCStyleCastParentheses: 'false'
+SpacesInContainerLiterals: 'false'
+SpacesInParentheses: 'false'
+SpacesInSquareBrackets: 'false'
+Standard: Auto
+TabWidth: '4'
+StatementMacros: [ 'ENGINE_ENUM()', 'ENGINE_ENUM_FLAGS()', 'ENGINE_ENUM_INNER()', 'ENGINE_ENUM_FLAGS_INNER()', 'VISUAL_CLASS()', 'VISUAL_CLASS_NO_META()', 'VISUAL_BASE_CLASS()', 'VISUAL_BASE_CLASS_NO_META()', 'VISUAL_DECLARE_REFLECT_CLASS_AS()', 'VISUAL_STRUCT()', 'VISUAL_STRUCT_NO_META()', 'VISUAL_BASE_STRUCT_NO_META()', 'VISUAL_BASE_STRUCT()', 'VISUAL_DECLARE_REFLECT_STRUCT_AS()', 'ENGINE_WARNINGS_POP()', 'ENGINE_WARNINGS_PUSH()', '_Pragma()', '_pragma()', 'ENGINE_INTRUSIVE_FORWARD_DECLARATION()', 'ENGINE_INTRUSIVE_FORWARD_DEFINITION()', 'VSO_ASSETREF_FORWARD_DECLARATION()', 'VSO_ASSETREF_FORWARD_DEFINITION()' ]
+UseTab: ForContinuationAndIndentation
+
+...

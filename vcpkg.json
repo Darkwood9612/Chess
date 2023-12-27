@@ -1,0 +1,17 @@
+{
+  "name": "chess-with-ai",
+  "version-string": "2.0.0",
+  "dependencies": [
+    "fmt",
+    "sdl2",
+	"sdl2-image",
+    { 
+      "name": "imgui", 
+      "features": [
+        "opengl3-binding", 
+        "sdl2-binding"
+      ] 
+    },
+    "opengl"
+  ]
+}

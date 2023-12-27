@@ -1,165 +1,164 @@
 #include "ChessEngine.h"
+
 #include <sstream>
 #include <stdexcept>
 
-void ChessEngine::SendCommand(const std::string& command)
+namespace Chess
 {
-  if (!IsWorked())
-    throw std::runtime_error("Engine Process not run");
+	void ChessEngine::SendCommand(const std::string& command)
+	{
+		if (!IsWorked()) {
+			throw std::runtime_error("Engine Process not run");
+		}
 
-  if (command.empty())
-    return;
+		if (command.empty()) {
+			return;
+		}
 
-  static const char endl = '\n';
+		static constexpr char NEW_LINE_CHAR = '\n';
 
-  WriteFile(write_stdin, command.data(), command.size(), &bread, NULL);
-  WriteFile(write_stdin, &endl, 1, &bread, NULL);
-}
+		WriteFile(_writeStdIn, command.data(), static_cast<DWORD>(command.size()), &_numberOfBytesRead, nullptr);
+		WriteFile(_writeStdIn, &NEW_LINE_CHAR, 1, &_numberOfBytesRead, nullptr);
+	}
 
-bool ChessEngine::IsReady()
-{
-  SendCommand("isready");
-  Sleep(100);
-  GetAnswer();
-  return GetLastAnswer().find("readyok") != std::string::npos;
-}
+	bool ChessEngine::IsReady()
+	{
+		SendCommand("isready");
+		Sleep(100);
 
-bool ChessEngine::GetAnswer()
-{
+		std::ignore = GetAnswer();
 
-  if (!IsWorked())
-    throw std::runtime_error("Engine Process not run");
+		return GetLastAnswer().find("readyok") != std::string::npos;
+	}
 
-  PeekNamedPipe(read_stdout, buf.data(), BUFF_SIZE - 1, &bread, &avail, NULL);
+	bool ChessEngine::GetAnswer()
+	{
+		if (!IsWorked()) {
+			throw std::runtime_error("Engine Process not run");
+		}
 
-  if (bread == 0)
-    return false;
+		_buffer.fill(0);
 
-  buf.fill(0);
-  std::stringstream ss;
+		PeekNamedPipe(_readStdOut, _buffer.data(), BUFF_SIZE - 1, &_numberOfBytesRead, &_totalBytesAvailable, nullptr);
 
-  bool stdOutGeteerBuff = avail > BUFF_SIZE - 1;
+		if (_numberOfBytesRead == 0) {
+			return false;
+		}
 
-  if (stdOutGeteerBuff) {
+		std::stringstream ss;
 
-    while (bread >= BUFF_SIZE - 1) {
-      ReadFile(read_stdout, buf.data(), BUFF_SIZE - 1, &bread, NULL);
-      ss << buf.data();
-      buf.fill(0);
-    }
-    answers.push(ss.str());
-    return true;
-  }
+		do {
+			_buffer.fill(0);
 
-  ReadFile(read_stdout, buf.data(), BUFF_SIZE - 1, &bread, NULL);
-  ss << buf.data();
-  answers.push(ss.str());
-  return true;
-}
+			ReadFile(_readStdOut, _buffer.data(), BUFF_SIZE - 1, &_numberOfBytesRead, nullptr);
 
-std::string ChessEngine::GetLastAnswer()
-{
-  if (answers.empty())
-    return "answers empty";
+			ss << _buffer.data();
 
-  return answers.top();
-}
+			_answers.push(ss.str());
 
-bool ChessEngine::IsWorked()
-{
-  unsigned long exit;
-  GetExitCodeProcess(pi.hProcess, &exit);
-  return exit == STILL_ACTIVE;
-}
+		} while (false /*_numberOfBytesRead >= BUFF_SIZE - 1*/);
 
-bool ChessEngine::NowWhiteMove()
-{
-  return this->Fen.find('w') != std::string::npos;
-}
+		return true;
+	}
 
-ChessEngine::WinningSide ChessEngine::IsSomebodyWon()
-{
-  SendCommand("go mate 1");
-  Sleep(50);
-  SendCommand("stop");
-  Sleep(50);
+	std::string ChessEngine::GetLastAnswer() const
+	{
+		return _answers.empty() ? "answers empty" : _answers.top();
+	}
 
-  if (auto answer = GetAnswer() &&
-        GetLastAnswer().find("bestmove (none)") != std::string::npos)
-    return NowWhiteMove() ? ChessEngine::WinningSide::Black
-                          : ChessEngine::WinningSide::White;
+	bool ChessEngine::IsWorked() const
+	{
+		unsigned long exit;
+		GetExitCodeProcess(_processInformation.hProcess, &exit);
+		return exit == STILL_ACTIVE;
+	}
 
-  return ChessEngine::WinningSide::NoOne;
-}
+	bool ChessEngine::IsWhiteTurnToMove() const
+	{
+		return _fen.find('w') != std::string::npos;
+	}
 
-void ChessEngine::UpdateFen()
-{
-  GetAnswer();
-  SendCommand("d");
-  Sleep(100);
-  GetAnswer();
+	WinningSide ChessEngine::IsSomebodyWon()
+	{
+		SendCommand("go mate 1");
+		Sleep(50);
 
-  std::string answer = GetLastAnswer();
+		SendCommand("stop");
+		Sleep(50);
 
-  size_t fenBeginIndex = answer.find("Fen: ") + 5;
-  size_t fenSize = answer.find("\r\n", fenBeginIndex) - fenBeginIndex;
+		std::ignore = GetAnswer();
 
-  const char* fenPtr = answer.data() + fenBeginIndex;
-  char* resPrt = new char[fenSize];
-  strncpy(resPrt, fenPtr, fenSize);
-  std::string result = resPrt;
+		if (GetLastAnswer().find("bestmove (none)") != std::string::npos) {
+			return IsWhiteTurnToMove() ? WinningSide::Black : WinningSide::White;
+		}
 
-  if (result.size() > fenSize)
-    result.erase(fenSize, result.size() - fenSize);
+		return WinningSide::NoOne;
+	}
 
-  result += '\0';
-  this->Fen = result;
-}
+	std::string ChessEngine::GetFen() const
+	{
+		return _fen;
+	}
 
-ChessEngine::~ChessEngine()
-{
-  SendCommand("quit");
-  Sleep(500);
-  TerminateProcess(pi.hProcess, 0);
-  CloseHandle(pi.hThread);
-  CloseHandle(pi.hProcess);
-  CloseHandle(newstdin);
-  CloseHandle(newstdout);
-  CloseHandle(read_stdout);
-  CloseHandle(write_stdin);
-}
+	void ChessEngine::UpdateFen()
+	{
+		std::ignore = GetAnswer();
 
-ChessEngine::ChessEngine(const std::string& enginePath)
-{
-  sa.lpSecurityDescriptor = NULL;
-  sa.nLength = sizeof(SECURITY_ATTRIBUTES);
-  sa.bInheritHandle = true;
+		SendCommand("d");
+		Sleep(100);
 
-  if (!CreatePipe(&newstdin, &write_stdin, &sa, 0))
-    throw std::runtime_error("Error CreatePipe stdin!");
+		std::ignore = GetAnswer();
 
-  if (!CreatePipe(&read_stdout, &newstdout, &sa, 0)) {
-    CloseHandle(newstdin);
-    CloseHandle(write_stdin);
-    throw std::runtime_error("Error CreatePipe stdout!");
-  }
+		const std::string answer = GetLastAnswer();
 
-  GetStartupInfo(&si);
+		const size_t fenBeginIndex = answer.find("Fen: ") + 5;
+		const size_t fenSize = answer.find("\r\n", fenBeginIndex) - fenBeginIndex;
 
-  si.dwFlags = STARTF_USESTDHANDLES | STARTF_USESHOWWINDOW;
-  si.wShowWindow = SW_HIDE;
-  si.hStdOutput = newstdout;
-  si.hStdError = newstdout;
-  si.hStdInput = newstdin;
+		_fen = answer.substr(fenBeginIndex, fenSize);
+	}
 
-  if (!CreateProcess(enginePath.data(), NULL, NULL, NULL, TRUE,
-                     CREATE_NEW_CONSOLE, NULL, NULL, &si, &pi)) {
-    CloseHandle(newstdin);
-    CloseHandle(newstdout);
-    CloseHandle(read_stdout);
-    CloseHandle(write_stdin);
-    throw std::runtime_error("Error CreateProcess!");
-  }
+	ChessEngine::~ChessEngine()
+	{
+		SendCommand("quit");
+		Sleep(500);
 
-  buf.fill(0);
-}
+		TerminateProcess(_processInformation.hProcess, 0);
+		CloseHandle(_processInformation.hThread);
+		CloseHandle(_processInformation.hProcess);
+		CloseHandle(_newStdIn);
+		CloseHandle(_newStdOut);
+		CloseHandle(_readStdOut);
+		CloseHandle(_writeStdIn);
+	}
+
+	ChessEngine::ChessEngine(const std::string& enginePath)
+	{
+		_securityAttributes.lpSecurityDescriptor = nullptr;
+		_securityAttributes.nLength = sizeof(SECURITY_ATTRIBUTES);
+		_securityAttributes.bInheritHandle = true;
+
+		if (!CreatePipe(&_newStdIn, &_writeStdIn, &_securityAttributes, 0)) {
+			throw std::runtime_error("Error CreatePipe std::in!");
+		}
+
+		if (!CreatePipe(&_readStdOut, &_newStdOut, &_securityAttributes, 0)) {
+			throw std::runtime_error("Error CreatePipe std::out!");
+		}
+
+		GetStartupInfo(&_startupInfo);
+
+		_startupInfo.dwFlags = STARTF_USESTDHANDLES | STARTF_USESHOWWINDOW;
+		_startupInfo.wShowWindow = SW_HIDE;
+		_startupInfo.hStdOutput = _newStdOut;
+		_startupInfo.hStdError = _newStdOut;
+		_startupInfo.hStdInput = _newStdIn;
+
+		if (!CreateProcess(enginePath.data(), nullptr, nullptr, nullptr, TRUE, CREATE_NEW_CONSOLE, nullptr, nullptr, &_startupInfo, &_processInformation)) {
+			CloseHandle(_newStdIn);
+			CloseHandle(_newStdOut);
+			CloseHandle(_readStdOut);
+			CloseHandle(_writeStdIn);
+			throw std::runtime_error("Error CreateProcess!");
+		}
+	}
+} // namespace Chess

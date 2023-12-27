@@ -1,39 +1,48 @@
 #pragma once
+#include "ChessDefines.h"
+
 #include <cstdint>
 #include <functional>
-#include <string>
 
-class DragDropManager
+namespace Chess
 {
-public:
-  void SetDragItem(std::string name, int8_t x, int8_t y, uint8_t numColumns,
-                   char piece);
-  void DropItem();
-  void DropItemAI();
 
-  std::string GetDragItemName() { return dragItemName; };
-  char GetDragPiece() { return piece; };
+	class DragDropManager
+	{
+	public:
+		using DragCallback = std::function<void(int32_t)>;
+		using DropCallback = std::function<void(bool, int32_t)>;
 
-  int8_t GetDragItemCurrCellId() { return dragItemCurrCellId; };
-  void SetDragItemCurrCellId(int8_t id) { dragItemCurrCellId = id; };
+	public:
+		void DropDraggedPiece(bool isAi = false);
 
-  int8_t GetDragItemStartPosX() { return dragItemStartPosX; };
-  int8_t GetDragItemStartPosY() { return dragItemStartPosY; };
+		void SetCurrentOverlappedCellId(int32_t id);
 
-  void SetDragCallback(std::function<void(int8_t)> fn);
-  void SetDropCallback(std::function<void(bool, int8_t)> fn);
+		void SetDragItem(int32_t cellNumber, int32_t x, int32_t y, EPiece pieceType);
 
-  bool IsEmpty() { return dragItemName == "null"; };
+		[[nodiscard]] bool HasDraggedPiece() const noexcept;
 
-private:
-  std::function<void(int8_t)> StartDragCallback;
-  std::function<void(bool, int8_t)> StartDropCallback;
+		[[nodiscard]] int32_t GetCurrentDraggedCellNumber() const noexcept;
 
-  std::string dragItemName = "null";
-  int8_t dragItemCurrCellId = -1;
+		[[nodiscard]] EPiece GetCurrentDraggedPieceType() const noexcept;
+		[[nodiscard]] int32_t GetCurrentOverlappedCellId() const noexcept;
 
-  int8_t dragItemStartPosX = -1;
-  int8_t dragItemStartPosY = -1;
+		[[nodiscard]] int32_t GetDragItemStartPosX() const noexcept;
+		[[nodiscard]] int32_t GetDragItemStartPosY() const noexcept;
 
-  char piece = '\0';
-};
+		void SetDragCallback(DragCallback fn);
+		void SetDropCallback(DropCallback fn);
+
+	private:
+		int32_t _currentDraggedCellNumber { -1 };
+		int32_t _currentOverlappedCellNumber { -1 };
+
+		int32_t _dragItemStartPosX { -1 };
+		int32_t _dragItemStartPosY { -1 };
+
+		EPiece _currentDraggedPieceType { EPiece::EMPTY };
+
+		DragCallback _startDragCallback {};
+		DropCallback _startDropCallback {};
+	};
+} // namespace Chess

@@ -1,43 +1,52 @@
 #pragma once
-#include <ctime>
-#include <optional>
+#include "ChessDefines.h"
+
+#include <chrono>
 #include <string>
 
-struct Move
+namespace Chess
 {
-public:
-  void SetFrom(int8_t cellId, uint8_t numColumns);
-  void SetTo(int8_t cellId, uint8_t numColumns);
-  void SetMove(std::string move);
 
-  std::string GetMove() { return from + to; };
-  bool IsFromEqualTo() { return from == to; };
+	struct Move
+	{
+	public:
+		void SetFrom(int32_t cellId, int32_t numColumns);
+		void SetTo(int32_t cellId, int32_t numColumns);
+		void SetMove(const std::string& move);
 
-private:
-  bool IsValidCellId(int8_t cellId, uint8_t numColumns);
-  std::string IdToBoardPos(int8_t cellId, uint8_t numColumns);
-  std::string from;
-  std::string to;
-};
+		[[nodiscard]] std::string GetMove() const;
+		[[nodiscard]] bool IsFromEqualTo() const noexcept;
 
-struct TurnControl
-{
-public:
-  bool IsPlayerPlayWithAI() { return playerPlayWithAI; };
+		[[nodiscard]] static bool IsValidCellId(int32_t cellId, int32_t numColumns);
+		[[nodiscard]] static std::string IdToBoardPos(int32_t cellId, int32_t numColumns);
 
-  void SetPlayerMadeChoice(bool playerWontPlayWithAI);
-  bool IsPlayerMadeChoice() { return playerMadeChoice.has_value(); };
+	private:
+		std::string _from;
+		std::string _to;
+	};
 
-  void SetStartThinkTime() { startedToThink = clock(); };
-  bool IsEngineThoughtEnough();
+	struct TurnControl
+	{
+	public:
+		void StartNewGame();
+		void SetStartThinkTime();
+		void SetPlayerMadeChoice(bool playerWontPlayWithAi);
 
-  bool IsGameOver() { return gameOver; };
-  void StartNewGame();
+		void SetGameOver(WinningSide winner);
 
-private:
-  std::optional<bool> playerMadeChoice;
-  const int runningTime = 3000;
-  clock_t startedToThink = 0;
-  bool playerPlayWithAI = false;
-  bool gameOver = false;
-};
+		[[nodiscard]] bool IsGameOver() const noexcept;
+		[[nodiscard]] bool IsPlayerMadeChoice() const noexcept;
+		[[nodiscard]] bool IsPlayerPlayWithAI() const noexcept;
+		[[nodiscard]] bool IsEngineThoughtEnough() const noexcept;
+
+	private:
+		bool _playerMadeChoice { false };
+		bool _playerPlayWithAi { false };
+
+		std::pair<bool, WinningSide> _currentWinner { false, WinningSide::NoOne };
+
+		static constexpr inline int RUNNING_TIME { 3000 };
+
+		std::chrono::time_point<std::chrono::steady_clock> _startedToThink {};
+	};
+} // namespace Chess

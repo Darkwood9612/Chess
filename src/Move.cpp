@@ -1,63 +1,104 @@
 #include "Move.h"
+
 #include <stdexcept>
 
-void Move::SetFrom(int8_t cellId, uint8_t numColumns)
+namespace Chess
 {
-  from = IdToBoardPos(cellId, numColumns);
-}
+	void Move::SetFrom(const int32_t cellId, const int32_t numColumns)
+	{
+		_from = IdToBoardPos(cellId, numColumns);
+	}
 
-void Move::SetTo(int8_t cellId, uint8_t numColumns)
-{
-  to = IdToBoardPos(cellId, numColumns);
-}
+	void Move::SetTo(const int32_t cellId, const int32_t numColumns)
+	{
+		_to = IdToBoardPos(cellId, numColumns);
+	}
 
-void Move::SetMove(std::string move)
-{
-  if (move.size() < 4)
-    throw std::runtime_error("move.size() < 4");
+	void Move::SetMove(const std::string& move)
+	{
+		if (move.size() < 4) {
+			throw std::runtime_error("move.size() < 4");
+		}
 
-  from = move[0];
-  from += move[1];
-  to = move[2];
-  to += move[3];
-}
+		_from = move.substr(0, 2);
+		_to = move.substr(2);
+	}
 
-bool Move::IsValidCellId(int8_t cellId, uint8_t numColumns)
-{
-  return numColumns * numColumns > cellId && cellId >= 0;
-}
+	std::string Move::GetMove() const
+	{
+		return _from + _to;
+	}
 
-std::string Move::IdToBoardPos(int8_t cellId, uint8_t numColumns)
-{
-  if (!IsValidCellId(cellId, numColumns))
-    throw std::runtime_error("Cell Id not walid. Id = " +
-                             std::to_string(cellId));
+	bool Move::IsFromEqualTo() const noexcept
+	{
+		return _from == _to;
+	}
 
-  uint8_t y = numColumns - cellId / numColumns;
-  uint8_t x = cellId - numColumns * (cellId / numColumns);
+	bool Move::IsValidCellId(const int32_t cellId, const int32_t numColumns)
+	{
+		return numColumns * numColumns > cellId && cellId >= 0;
+	}
 
-  std::string res;
-  res = 'a' + x;
-  res += std::to_string(y);
+	std::string Move::IdToBoardPos(const int32_t cellId, const int32_t numColumns)
+	{
+		if (!IsValidCellId(cellId, numColumns)) {
+			return {};
+		}
 
-  return res;
-}
+		const int32_t y = numColumns - cellId / numColumns;
+		const int32_t x = cellId - numColumns * (cellId / numColumns);
 
-void TurnControl::SetPlayerMadeChoice(bool playerWontPlayWithAI)
-{
-  playerPlayWithAI =
-    playerMadeChoice.has_value() ? playerPlayWithAI : playerWontPlayWithAI;
-  playerMadeChoice = playerMadeChoice.has_value() ? playerMadeChoice : true;
-}
+		std::string res;
 
-bool TurnControl::IsEngineThoughtEnough()
-{
-  return (clock() - startedToThink) > runningTime;
-}
+		constexpr char a = 'a';
 
-void TurnControl::StartNewGame()
-{
-  gameOver = false;
-  startedToThink = 0;
-  playerMadeChoice.reset();
-}
+		res = static_cast<char>(a + x);
+		res += std::to_string(y);
+
+		return res;
+	}
+
+	void TurnControl::SetPlayerMadeChoice(const bool playerWontPlayWithAi)
+	{
+		_playerPlayWithAi = _playerMadeChoice ? _playerPlayWithAi : playerWontPlayWithAi;
+
+		_playerMadeChoice = true;
+	}
+
+	void TurnControl::SetGameOver(const WinningSide winner)
+	{
+		_currentWinner = { true, winner };
+	}
+
+	bool TurnControl::IsEngineThoughtEnough() const noexcept
+	{
+		return (std::chrono::high_resolution_clock::now() - _startedToThink).count() >= RUNNING_TIME;
+	}
+
+	bool TurnControl::IsGameOver() const noexcept
+	{
+		return _currentWinner.first;
+	}
+
+	bool TurnControl::IsPlayerMadeChoice() const noexcept
+	{
+		return _playerMadeChoice;
+	}
+
+	bool TurnControl::IsPlayerPlayWithAI() const noexcept
+	{
+		return _playerPlayWithAi;
+	}
+
+	void TurnControl::StartNewGame()
+	{
+		_playerMadeChoice = false;
+		_currentWinner = { false, WinningSide::NoOne };
+		_startedToThink = std::chrono::high_resolution_clock::now();
+	}
+
+	void TurnControl::SetStartThinkTime()
+	{
+		_startedToThink = std::chrono::high_resolution_clock::now();
+	}
+} // namespace Chess

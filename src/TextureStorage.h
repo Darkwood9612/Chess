@@ -1,19 +1,27 @@
 #pragma once
+#include <filesystem>
+#include <map>
 #include <SDL_opengl.h>
 #include <SDL_surface.h>
-#include <map>
 #include <string>
 
-class TextureStorage
+namespace Chess
 {
-public:
-  void ImageLoad(char id, const std::string& path);
+	class TextureStorage
+	{
+	public:
+		void Init(const std::filesystem::path& absolutePath);
 
-  GLuint LookupTextureById(char id);
+		void ImageLoad(const std::string& id, const std::string& path);
 
-private:
-  GLuint LoadIMG_AndConvertToTexture(const std::string& name);
-  GLuint SurfaceToTexture(SDL_Surface* surface);
+		[[nodiscard]] GLuint LookupTextureById(const std::string& id) const;
 
-  std::map<const char, GLuint> storage;
-};
+		static [[nodiscard]] GLuint SurfaceToTexture(const SDL_Surface* surface);
+		static [[nodiscard]] GLuint LoadIMG_AndConvertToTexture(const std::string& name);
+
+		static inline constexpr std::string_view BACKGROUND_ID = "Background";
+
+	private:
+		std::map<std::string, GLuint> _storage;
+	};
+}; // namespace Chess
